@@ -1,0 +1,14 @@
+{
+    "small": {
+        "dataset_path": "sample",
+        "meta_path": "sample"
+    },
+    "full": {
+        "dataset_path": "sample",
+        "meta_path": "sample"
+    },
+    "nni": {
+        "dataset_path": "sample",
+        "meta_path": "sample"
+    }
+}

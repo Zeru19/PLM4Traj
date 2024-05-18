@@ -1,0 +1,254 @@
+[
+    {
+        "repeat": 1,
+        "data": {
+            "name": "small_chengdu"
+        },
+        "models": [
+            {
+                "name": "let",
+                "config": {
+                    "d_model": 768,
+                    "output_size": 128,
+                    "model_class": "gpt2",
+                    "dis_feats": [
+                        1,
+                        5,
+                        7
+                    ],
+                    "num_embeds": [
+                        4315,
+                        7,
+                        24
+                    ],
+                    "con_feats": [
+                        0,
+                        3,
+                        4,
+                        8,
+                        9,
+                        10
+                    ],
+                    "two_stage": false,
+                    "lora": true,
+                    "lora_alpha": 16,
+                    "lora_dim": 8,
+                    "wpe_ft": false,
+                    "semantic_projecting": true,
+                    "add_poi": true,
+                    "add_conv_embedder": true,
+                    "kernel_size": 5,
+                    "num_virtual_anchors": 15
+                }
+            }
+        ],
+        "pretrain": {
+            "load": false,
+            "loss": {
+                "name": "trip_causal",
+                "config": {
+                    "latent_size": 768,
+                    "out_dis": {
+                        "feats": [
+                            1
+                        ],
+                        "num_embeds": [
+                            4315
+                        ]
+                    },
+                    "out_con_feas": [
+                        3,
+                        4,
+                        8,
+                        9,
+                        10
+                    ],
+                    "dis_weight": 0.5,
+                    "con_weight": 0.5,
+                    "shift_labels": true,
+                    "add_poi": true
+                }
+            },
+            "dataloader": {
+                "name": "trip_with_odpoi_hour",
+                "meta_types": [
+                    "trip",
+                    "odpois-3"
+                ],
+                "dataset_config": {},
+                "config": {
+                    "batch_size": 16,
+                    "shuffle": true,
+                    "num_workers": 4
+                },
+                "collate_fn_config": {
+
+                }
+            },
+            "trainer": {
+                "name": "generative",
+                "config": {
+                    "num_epoch": 20,
+                    "cache_epoches": true,
+                    "lr": 1e-4
+                }
+            }
+        },
+        "downstream": [
+            {
+                "task": "destination",
+                "select_models": [
+                    0
+                ],
+                "eval_set": 2,
+                "dataloader": {
+                    "name": "trip_with_odpoi_hour",
+                    "meta_types": [
+                        "trip",
+                        "odpois-3",
+                        "destination"
+                    ],
+                    "dataset_config": {},
+                    "config": {
+                        "batch_size": 16,
+                        "shuffle": true,
+                        "num_workers": 4
+                    },
+                    "collate_fn_config": {
+
+                    }
+                },
+                "config": {
+                    "finetune": true,
+                    "num_epoch": 40,
+                    "save_prediction": false,
+                    "lr": 5e-4,
+                    "es_epoch": 10,
+                    "pre_length": 5
+                }
+            }
+        ]
+    },
+    {
+        "repeat": 1,
+        "data": {
+            "name": "small_chengdu"
+        },
+        "models": [
+            {
+                "name": "let",
+                "config": {
+                    "d_model": 768,
+                    "output_size": 128,
+                    "model_class": "gpt2",
+                    "dis_feats": [
+                        1,
+                        5,
+                        7
+                    ],
+                    "num_embeds": [
+                        4315,
+                        7,
+                        24
+                    ],
+                    "con_feats": [
+                        3,
+                        4
+                    ],
+                    "two_stage": false,
+                    "lora": true,
+                    "lora_alpha": 16,
+                    "lora_dim": 8,
+                    "wpe_ft": false,
+                    "semantic_projecting": true,
+                    "add_poi": true,
+                    "add_conv_embedder": true,
+                    "kernel_size": 5,
+                    "num_virtual_anchors": 15
+                }
+            }
+        ],
+        "pretrain": {
+            "load": false,
+            "loss": {
+                "name": "trip_causal",
+                "config": {
+                    "latent_size": 768,
+                    "out_dis": {
+                        "feats": [
+                            1
+                        ],
+                        "num_embeds": [
+                            4315
+                        ]
+                    },
+                    "out_con_feas": [
+                        3,
+                        4
+                    ],
+                    "dis_weight": 0.5,
+                    "con_weight": 0.5,
+                    "shift_labels": true,
+                    "add_poi": true
+                }
+            },
+            "dataloader": {
+                "name": "trip_with_odpoi_hour",
+                "meta_types": [
+                    "trip",
+                    "odpois-3"
+                ],
+                "dataset_config": {},
+                "config": {
+                    "batch_size": 16,
+                    "shuffle": true,
+                    "num_workers": 4
+                },
+                "collate_fn_config": {
+
+                }
+            },
+            "trainer": {
+                "name": "generative",
+                "config": {
+                    "num_epoch": 20,
+                    "cache_epoches": false,
+                    "lr": 1e-4
+                }
+            }
+        },
+        "downstream": [
+            {
+                "task": "tte",
+                "select_models": [
+                    0
+                ],
+                "eval_set": 2,
+                "dataloader": {
+                    "name": "trip_with_odpoi_hour",
+                    "meta_types": [
+                        "trip",
+                        "odpois-3",
+                        "tte"
+                    ],
+                    "dataset_config": {},
+                    "config": {
+                        "batch_size": 16,
+                        "shuffle": true,
+                        "num_workers": 4
+                    },
+                    "collate_fn_config": {
+
+                    }
+                },
+                "config": {
+                    "finetune": true,
+                    "num_epoch": 40,
+                    "save_prediction": false,
+                    "lr": 1e-4,
+                    "es_epoch": 10
+                }
+            }
+        ]
+    }
+]
