@@ -277,14 +277,14 @@ class LET(Encoder):
                 sample, sample_valid_len = concatenate_sequences(sample, poi_part, prefix_valid_len, poi_valid_len)
                 sample, sample_valid_len = concatenate_sequences(sample, suffix_prompt, sample_valid_len)
 
-                o_suffix_valid_len = origin_valid_len + head.size(1)
+                o_suffix_valid_len = origin_valid_len + prefix_valid_len
                 if shift_labels:
                     o_suffix_valid_len -= 1
                     poi_valid_len -= 1
-                o_placeholder = get_batch_mask(B, sample.size(1), o_suffix_valid_len)
-                o_placeholder[:, :head.size(1) + self.start_point.size(1)] = False
-                d_placeholder = get_batch_mask(B, sample.size(1), poi_valid_len + head.size(1)).long() - \
-                    get_batch_mask(B, sample.size(1), origin_valid_len + head.size(1) + self.end_point.size(1)).long() == 1
+                o_placeholder = get_batch_mask(B, sample.size(1), o_suffix_valid_len).long() - \
+                    get_batch_mask(B, sample.size(1), prefix_valid_len + self.start_point.size(1)).long() == 1
+                d_placeholder = get_batch_mask(B, sample.size(1), poi_valid_len + prefix_valid_len).long() - \
+                    get_batch_mask(B, sample.size(1), origin_valid_len + prefix_valid_len + self.end_point.size(1)).long() == 1
         else:  # only traj part
             sample, sample_valid_len = concatenate_sequences(head, traj_part, head.size(1), traj_valid_len)
             if shift_labels:
@@ -453,9 +453,8 @@ class LET(Encoder):
         # tokenize and embed
         self.start_point, self.end_point, self.traj_template, self.suffix_prompt = \
             self.text_emb(start_point, end_point, traj, suffix_prompt)
-        self.start_point, self.end_point, self.traj_template = \
-            [nn.Parameter(e, requires_grad=False) for e in (self.start_point, self.end_point, self.traj_template)]
-        self.suffix_prompt = nn.Parameter(self.suffix_prompt, requires_grad=True)
+        self.start_point, self.end_point, self.traj_template, self.suffix_prompt = \
+            [nn.Parameter(e, requires_grad=False) for e in (self.start_point, self.end_point, self.traj_template, self.suffix_prompt)]
 
     def _prefix_template(self, start_weekday, start_hour, lang='zh'):
         start_weekday, start_hour = start_weekday.long(), start_hour.long()
