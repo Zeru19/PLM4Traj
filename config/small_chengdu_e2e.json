@@ -42,58 +42,6 @@
                 }
             }
         ],
-        "pretrain": {
-            "load": false,
-            "loss": {
-                "name": "trip_causal",
-                "config": {
-                    "latent_size": 768,
-                    "out_dis": {
-                        "feats": [
-                            1
-                        ],
-                        "num_embeds": [
-                            4315
-                        ]
-                    },
-                    "out_con_feas": [
-                        3,
-                        4,
-                        8,
-                        9,
-                        10
-                    ],
-                    "dis_weight": 0.5,
-                    "con_weight": 0.5,
-                    "shift_labels": true,
-                    "add_poi": true
-                }
-            },
-            "dataloader": {
-                "name": "trip_with_odpoi_hour",
-                "meta_types": [
-                    "trip",
-                    "odpois-3"
-                ],
-                "dataset_config": {},
-                "config": {
-                    "batch_size": 16,
-                    "shuffle": true,
-                    "num_workers": 4
-                },
-                "collate_fn_config": {
-
-                }
-            },
-            "trainer": {
-                "name": "generative",
-                "config": {
-                    "num_epoch": 20,
-                    "cache_epoches": true,
-                    "lr": 1e-4
-                }
-            }
-        },
         "downstream": [
             {
                 "task": "destination",
@@ -202,55 +150,6 @@
                 }
             }
         ],
-        "pretrain": {
-            "load": false,
-            "loss": {
-                "name": "trip_causal",
-                "config": {
-                    "latent_size": 768,
-                    "out_dis": {
-                        "feats": [
-                            1
-                        ],
-                        "num_embeds": [
-                            4315
-                        ]
-                    },
-                    "out_con_feas": [
-                        3,
-                        4
-                    ],
-                    "dis_weight": 0.5,
-                    "con_weight": 0.5,
-                    "shift_labels": true,
-                    "add_poi": true
-                }
-            },
-            "dataloader": {
-                "name": "trip_with_odpoi_hour",
-                "meta_types": [
-                    "trip",
-                    "odpois-3"
-                ],
-                "dataset_config": {},
-                "config": {
-                    "batch_size": 16,
-                    "shuffle": true,
-                    "num_workers": 4
-                },
-                "collate_fn_config": {
-
-                }
-            },
-            "trainer": {
-                "name": "generative",
-                "config": {
-                    "num_epoch": 20,
-                    "cache_epoches": false,
-                    "lr": 1e-4
-                }
-            }
-        },
         "downstream": [
             {
                 "task": "tte",

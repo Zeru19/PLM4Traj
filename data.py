@@ -354,6 +354,120 @@ class Data:
 
             meta = [ttes]
 
+        elif 'hopqrytgtpois' in meta_type:
+            """
+            OD POIs for hopped trips
+            """
+            params = meta_type.split('-')
+            num_target = int(params[1]) if len(params) > 1 else 1000
+            max_pois = int(params[2]) if len(params) > 2 else 5
+
+            try:
+                o_poi_list, d_poi_list = self.load_meta(f'odpois-{max_pois}', select_set)
+            except FileNotFoundError:
+                self.dump_meta(f'odpois-{max_pois}', select_set)
+                o_poi_list, d_poi_list = self.load_meta(f'odpois-{max_pois}', select_set)
+
+            hopqrytgt_name = 'hopqrytgt' + f'-{num_target}' if len(params) > 1 else 'hopqrytgt'
+            try:
+                _, = self.load_meta(hopqrytgt_name, select_set)
+            except FileNotFoundError:
+                self.dump_meta(hopqrytgt_name, select_set)
+                _, = self.load_meta(hopqrytgt_name, select_set)
+            print("Load {}".format(hopqrytgt_name))
+
+            num_target = min(1000, len(o_poi_list) - 1)
+            sampled_trip_ids = np.arange(num_target)
+
+            qry_o_poi_list = [o_poi_list[i] for i in sampled_trip_ids]
+            qry_d_poi_list = [d_poi_list[i] for i in sampled_trip_ids]
+            tgt_o_poi_list = [o_poi_list[i] for i in sampled_trip_ids]
+            tgt_d_poi_list = [d_poi_list[i] for i in sampled_trip_ids]
+
+            print("qry_o_poi_list: ", qry_o_poi_list)
+
+            meta = [np.array(qry_o_poi_list + tgt_o_poi_list, dtype=object),
+                    np.array(qry_d_poi_list + tgt_d_poi_list, dtype=object)]
+
+        elif 'hopqrytgt' in meta_type:
+            """
+            Hopped trips and k-segmented trips for similar trajectory search
+            """
+            params = meta_type.split('-')
+            num_target = int(params[1]) if len(params) > 1 else 1000
+            
+            try:
+                trip, = self.load_meta('trip', select_set)
+            except FileNotFoundError:
+                self.dump_meta('trip', select_set)
+                trip, = self.load_meta('trip', select_set)
+
+            num_target = min(len(trip) - 1, num_target)
+            # random.seed(10)
+            # sampled_trip_ids = random.sample(range(len(trip)), num_target)
+            sampled_trip_ids = np.arange(num_target)
+
+            # generate query trips and target trips from sampled trips
+            qry_trips = [t[::2] for t in trip[sampled_trip_ids]]
+            tgt_trips = [t[1::2] for t in trip[sampled_trip_ids]]
+
+            meta = [np.array(qry_trips + tgt_trips, dtype=object)]
+
+        elif 'hopnegindex' in meta_type:
+            """
+            Hopped trips and nearer negative trips for similar trajectory search
+            """
+            params = meta_type.split('-')
+            num_target = int(params[1]) if len(params) > 1 else 1000
+            num_negative = int(params[2]) if len(params) > 2 else 10000
+
+            try:
+                trip, = self.load_meta('trip', select_set)
+            except FileNotFoundError:
+                self.dump_meta('trip', select_set)
+                trip, = self.load_meta('trip', select_set)
+
+            hopqrytgt_name = 'hopqrytgt' + f'-{num_target}' if len(params) > 1 else 'hopqrytgt'
+            try:
+                hopqrytgt, = self.load_meta(hopqrytgt_name, select_set)
+            except FileNotFoundError:
+                self.dump_meta(hopqrytgt_name, select_set)
+                hopqrytgt, = self.load_meta(hopqrytgt_name, select_set)
+            print("Load {}".format(hopqrytgt_name))
+
+            num_target = len(hopqrytgt) // 2
+            num_negative = min(len(trip) - num_target, num_negative)
+
+            select_index = [3, 4]
+
+            kseg_trips = []
+            for arr in tqdm(trip, desc='Gathering kseg trips', total=len(trip)):
+                kseg_arr = resample_to_k_segments(arr[..., select_index], MIN_TRIP_LEN)
+                kseg_trips.append(kseg_arr)
+            kseg_trips = np.stack(kseg_trips)
+            
+            qry_trips = hopqrytgt[:num_target]
+            # Farthest neighbor search
+            neg_euclidean = lambda x, y: - euclidean_distances(x.reshape(1, -1), y.reshape(1, -1))
+            n_neighbors = len(kseg_trips) - 10 if len(kseg_trips) > 10 else num_negative
+            farthest_knn = NearestNeighbors(n_neighbors=n_neighbors, metric=neg_euclidean)
+            farthest_knn.fit(kseg_trips)
+
+            qry_indices = np.arange(num_target)
+            neg_indices = []
+            for arr in tqdm(kseg_trips[:num_target], desc='Gathering sim idx', 
+                            total=num_target):
+                # negative index: the farthest neighbors of the query
+                farthest_idx = farthest_knn.kneighbors([arr], return_distance=False)
+                # choose num_negtive neighbors randomly
+                print(farthest_idx[0])
+                farthest_idx = np.random.choice(farthest_idx[0], num_negative, replace=False)
+                neg_indices.append(farthest_idx)
+            neg_indices = np.array(neg_indices)
+            print("neg_indices shape: ", neg_indices.shape)
+
+            meta = [neg_indices]
+
         else:
             raise NotImplementedError('No meta type', meta_type)
 
@@ -427,6 +541,24 @@ class Denormalizer(nn.Module):
             if col in select_cols:
                 x[..., col] = self._denorm_col(x[..., col], name)
         return x
+
+
+def resample_to_k_segments(trip, kseg):
+    """
+    Resample a trajectory to k segments.
+    :return: a numpy array of shape (kseg * 3,)
+    """
+    ksegs = []
+    seg = len(trip) // kseg
+
+    for i in range(kseg):
+        if i == kseg - 1:
+            ksegs.append(np.mean(trip[i * seg:], axis=0))
+        else:
+            ksegs.append(np.mean(trip[i * seg: i * seg + seg], axis=0))
+    ksegs = np.array(ksegs).reshape(-1)
+
+    return ksegs
 
 
 if __name__ == '__main__':

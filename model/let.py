@@ -277,14 +277,14 @@ class LET(Encoder):
                 sample, sample_valid_len = concatenate_sequences(sample, poi_part, prefix_valid_len, poi_valid_len)
                 sample, sample_valid_len = concatenate_sequences(sample, suffix_prompt, sample_valid_len)
 
-                o_suffix_valid_len = origin_valid_len + prefix_valid_len
+                o_suffix_valid_len = origin_valid_len + head.size(1)
                 if shift_labels:
                     o_suffix_valid_len -= 1
                     poi_valid_len -= 1
-                o_placeholder = get_batch_mask(B, sample.size(1), o_suffix_valid_len).long() - \
-                    get_batch_mask(B, sample.size(1), prefix_valid_len + self.start_point.size(1)).long() == 1
-                d_placeholder = get_batch_mask(B, sample.size(1), poi_valid_len + prefix_valid_len).long() - \
-                    get_batch_mask(B, sample.size(1), origin_valid_len + prefix_valid_len + self.end_point.size(1)).long() == 1
+                o_placeholder = get_batch_mask(B, sample.size(1), o_suffix_valid_len)
+                o_placeholder[:, :head.size(1) + self.start_point.size(1)] = False
+                d_placeholder = get_batch_mask(B, sample.size(1), poi_valid_len + head.size(1)).long() - \
+                    get_batch_mask(B, sample.size(1), origin_valid_len + head.size(1) + self.end_point.size(1)).long() == 1
         else:  # only traj part
             sample, sample_valid_len = concatenate_sequences(head, traj_part, head.size(1), traj_valid_len)
             if shift_labels:

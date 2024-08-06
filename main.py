@@ -197,6 +197,16 @@ for num_entry, entry in enumerate(config):
                                                   collate_fn=partial(DatasetClass.collate_fn, **dataloader_collate_fn_config),
                                                   **dataloader_config)
 
+                if down_task == 'search':
+                    search_metas = data.load_meta('trip', int(down_entry['eval_set'])) 
+                    if model_name == 'let':
+                        search_metas += data.load_meta('odpois-3', int(down_entry['eval_set']))
+                    trip_dataloader = DataLoader(DatasetClass(*search_metas, **dataset_config),
+                                                 collate_fn=partial(DatasetClass.collate_fn, **dataloader_collate_fn_config) if hasattr(DatasetClass, 'collate_fn') else None,
+                                                 **dataloader_config)
+                    neg_indices = data.load_meta(down_entry['neg_indices'], int(down_entry['eval_set']))[0]
+
+
                 down_comm_params = {
                     "train_data": down_train_dataloader, "eval_data": down_eval_dataloader,
                     "models": down_models, "device": device, "cache_dir": data.base_path,
@@ -220,6 +230,13 @@ for num_entry, entry in enumerate(config):
                         **predictor_config)
                     down_trainer = task.TTE(
                         predictor=predictor,
+                        **down_config)
+                elif down_task == 'search':
+                    predictor = DownPredictor.NonePredictor()
+                    down_trainer = task.Search(
+                        predictor=predictor,
+                        trip_dataloader=trip_dataloader,
+                        neg_indices=neg_indices,
                         **down_config)
                 else:
                     raise NotImplementedError(f'No downstream task called "{down_task}".')
